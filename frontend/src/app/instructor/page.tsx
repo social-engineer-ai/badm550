@@ -11,6 +11,7 @@ export default function InstructorDashboard() {
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
+    const [editingDraft, setEditingDraft] = useState<any>(null);
 
     const fetchData = async () => {
         try {
@@ -66,6 +67,28 @@ export default function InstructorDashboard() {
             alert("Sync failed. Ensure your Google OAuth credentials are correct.");
         } finally {
             setSyncing(false);
+        }
+    };
+
+    const handleEditDraft = (draft: any) => {
+        setEditingDraft({ ...draft });
+    };
+
+    const handleSaveDraft = async () => {
+        if (!editingDraft) return;
+        try {
+            await apiRequest(`/instructor/drafts/${editingDraft.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    subject: editingDraft.subject,
+                    body: editingDraft.body
+                })
+            });
+            setDrafts(drafts.map(d => d.id === editingDraft.id ? editingDraft : d));
+            setEditingDraft(null);
+            alert("Draft updated successfully!");
+        } catch (err) {
+            alert("Failed to save draft.");
         }
     };
 
@@ -304,7 +327,7 @@ export default function InstructorDashboard() {
                                     <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>{draft.body.substring(0, 100)}...</p>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <button onClick={() => handleSendEmail(draft.id)} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '6px 12px', flex: 1 }}>Send</button>
-                                        <button className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '6px 12px', flex: 1 }}>Edit</button>
+                                        <button onClick={() => handleEditDraft(draft)} className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '6px 12px', flex: 1 }}>Edit</button>
                                     </div>
                                 </div>
                             ))}
@@ -312,6 +335,56 @@ export default function InstructorDashboard() {
                         </div>
                     </section>
                 </div>
+
+                {/* Edit Draft Modal */}
+                {editingDraft && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    }} onClick={() => setEditingDraft(null)}>
+                        <div className="glass-card" style={{
+                            width: '90%', maxWidth: '600px', padding: '2.5rem'
+                        }} onClick={e => e.stopPropagation()}>
+                            <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Edit Draft</h2>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>RECIPIENT</label>
+                                <p style={{ fontSize: '0.9rem', marginTop: '4px' }}>{editingDraft.recipient_email}</p>
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>SUBJECT</label>
+                                <input
+                                    className="glass-card"
+                                    style={{ width: '100%', background: 'var(--bg-darker)', padding: '12px', marginTop: '6px', color: 'white' }}
+                                    value={editingDraft.subject}
+                                    onChange={e => setEditingDraft({ ...editingDraft, subject: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>MESSAGE BODY</label>
+                                <textarea
+                                    className="glass-card"
+                                    style={{ width: '100%', background: 'var(--bg-darker)', padding: '12px', marginTop: '6px', color: 'white', resize: 'none' }}
+                                    rows={8}
+                                    value={editingDraft.body}
+                                    onChange={e => setEditingDraft({ ...editingDraft, body: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button className="btn btn-primary" style={{ flex: 1, padding: '14px' }} onClick={handleSaveDraft}>
+                                    Save Changes
+                                </button>
+                                <button className="btn btn-ghost" style={{ flex: 1, padding: '14px' }} onClick={() => setEditingDraft(null)}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

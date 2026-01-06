@@ -133,17 +133,57 @@ async def get_instructor_weeks(db: Session = Depends(get_db)):
     from ..models.features import Week
     return db.query(Week).order_by(Week.week_number).all()
 
+@router.post("/weeks", dependencies=[Depends(RoleChecker([UserRole.TEACHER, UserRole.ADMIN]))])
+async def create_week(data: dict, db: Session = Depends(get_db)):
+    from ..models.features import Week
+    from ..models.core import Project
+
+    # Get the project_id from data or find default project
+    project_id = data.get("project_id")
+    if not project_id:
+        project = db.query(Project).first()
+        if project:
+            project_id = project.id
+
+    # Get the next week number
+    max_week = db.query(Week).filter(Week.project_id == project_id).order_by(Week.week_number.desc()).first()
+    next_week_number = (max_week.week_number + 1) if max_week else 1
+
+    new_week = Week(
+        project_id=project_id,
+        week_number=data.get("week_number", next_week_number),
+        title=data.get("title", f"Week {next_week_number}"),
+        overview=data.get("overview", ""),
+        deliverable_spec=data.get("deliverable_spec", {})
+    )
+    db.add(new_week)
+    db.commit()
+    db.refresh(new_week)
+
+    return new_week
+
+@router.delete("/weeks/{week_id}", dependencies=[Depends(RoleChecker([UserRole.TEACHER, UserRole.ADMIN]))])
+async def delete_week(week_id: int, db: Session = Depends(get_db)):
+    from ..models.features import Week
+    week = db.query(Week).filter(Week.id == week_id).first()
+    if not week:
+        raise HTTPException(status_code=404, detail="Week not found")
+
+    db.delete(week)
+    db.commit()
+    return {"status": "success", "message": "Week deleted"}
+
 @router.put("/weeks/{week_id}", dependencies=[Depends(RoleChecker([UserRole.TEACHER, UserRole.ADMIN]))])
 async def update_week(week_id: int, data: dict, db: Session = Depends(get_db)):
     from ..models.features import Week
     week = db.query(Week).filter(Week.id == week_id).first()
     if not week:
         raise HTTPException(status_code=404, detail="Week not found")
-    
+
     for key, value in data.items():
         if hasattr(week, key):
             setattr(week, key, value)
-            
+
     db.commit()
     return {"status": "success"}
 
@@ -155,6 +195,25 @@ async def trigger_sync(
     from ..services.email_service import email_service
     analysis = await email_service.sync_and_process_inbox(db=db, user_id=current_user.id)
     return {"status": "success", "analysis": analysis}
+
+@router.put("/drafts/{draft_id}")
+async def update_draft(
+    draft_id: int,
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    from ..models.features import EmailDraft
+    draft = db.query(EmailDraft).filter(EmailDraft.id == draft_id).first()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    if "subject" in data:
+        draft.subject = data["subject"]
+    if "body" in data:
+        draft.body = data["body"]
+
+    db.commit()
+    return {"status": "success", "draft": draft}
 
 @router.post("/drafts/{draft_id}/send")
 async def send_draft(

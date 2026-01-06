@@ -159,9 +159,9 @@ class EmailService:
     async def _mock_process_inbox(self):
         """Simulates an inbox process for development/testing."""
         mock_emails = [
-            {"from": "student1@illinois.edu", "subject": "Week 3 Question", "body": "I am confused about the price gap calculation in Q1 data slice."},
-            {"from": "student2@illinois.edu", "subject": "Data Error?", "body": "The column 'rev_adj' seems missing for KC division teams."},
-            {"from": "student3@illinois.edu", "subject": "Meeting request", "body": "Can our team AWG-3 meet you tomorrow at 2pm?"}
+            {"id": "mock_1", "from": "student1@illinois.edu", "subject": "Week 3 Question", "body": "I am confused about the price gap calculation in Q1 data slice."},
+            {"id": "mock_2", "from": "student2@illinois.edu", "subject": "Data Error?", "body": "The column 'rev_adj' seems missing for KC division teams."},
+            {"id": "mock_3", "from": "student3@illinois.edu", "subject": "Meeting request", "body": "Can our team AWG-3 meet you tomorrow at 2pm?"}
         ]
 
         # Use AIService to cluster and summarize

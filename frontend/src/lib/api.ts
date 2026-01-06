@@ -34,9 +34,9 @@ export const authApi = {
 
 // Projects API
 export const projectsApi = {
-    list: () => apiRequest('/projects'),
+    list: () => apiRequest('/projects/'),
     get: (id: number) => apiRequest(`/projects/${id}`),
-    create: (data: any) => apiRequest('/projects', {
+    create: (data: any) => apiRequest('/projects/', {
         method: 'POST',
         body: JSON.stringify(data)
     }),

@@ -8,6 +8,8 @@ export default function TeamsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTeam, setSelectedTeam] = useState<any>(null);
     const [auditData, setAuditData] = useState<any>(null);
+    const [configTeam, setConfigTeam] = useState<any>(null);
+    const [projects, setProjects] = useState<any[]>([]);
 
     const fetchTeams = async () => {
         try {
@@ -20,8 +22,18 @@ export default function TeamsPage() {
         }
     };
 
+    const fetchProjects = async () => {
+        try {
+            const data = await apiRequest('/projects');
+            setProjects(data);
+        } catch (err) {
+            console.error("Failed to fetch projects", err);
+        }
+    };
+
     useEffect(() => {
         fetchTeams();
+        fetchProjects();
     }, []);
 
     const handleAudit = async (team: any) => {
@@ -45,6 +57,47 @@ export default function TeamsPage() {
         } catch (err) {
             alert("Failed to update health.");
         }
+    };
+
+    const handleConfig = (team: any) => {
+        setConfigTeam(team);
+    };
+
+    const handleAssignProject = async (projectId: number) => {
+        if (!configTeam) return;
+        try {
+            await apiRequest(`/projects/${projectId}/assign-team`, {
+                method: 'POST',
+                body: JSON.stringify({ team_id: configTeam.id })
+            });
+            await fetchTeams();
+            setConfigTeam(null);
+            alert("Project assigned successfully!");
+        } catch (err) {
+            alert("Failed to assign project.");
+        }
+    };
+
+    const handleExportAudit = () => {
+        const exportData = teams.map(team => ({
+            name: team.name,
+            project: team.project?.name || 'Unassigned',
+            health_status: team.health_status,
+            members: team.memberships?.map((m: any) =>
+                `${m.student?.user?.first_name} ${m.student?.user?.last_name} (${m.role})`
+            ).join(', ')
+        }));
+
+        const csvContent = "Team,Project,Health,Members\n" +
+            exportData.map(row =>
+                `"${row.name}","${row.project}","${row.health_status}","${row.members}"`
+            ).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `team_audit_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
     };
 
     const filteredTeams = teams.filter(team =>
@@ -98,7 +151,7 @@ export default function TeamsPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                    <button className="btn btn-secondary" style={{ padding: '0 2rem' }}>Export Audit Trail</button>
+                    <button onClick={handleExportAudit} className="btn btn-secondary" style={{ padding: '0 2rem' }}>Export Audit Trail</button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '2rem' }}>
@@ -150,7 +203,7 @@ export default function TeamsPage() {
 
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                                 <button onClick={() => handleAudit(team)} className="btn btn-primary" style={{ flex: 1, padding: '12px', fontSize: '0.85rem' }}>Audit Team Trail</button>
-                                <button className="btn btn-ghost" style={{ flex: 1, padding: '12px', fontSize: '0.85rem' }}>Project Config</button>
+                                <button onClick={() => handleConfig(team)} className="btn btn-ghost" style={{ flex: 1, padding: '12px', fontSize: '0.85rem' }}>Project Config</button>
                             </div>
                         </div>
                     ))}
@@ -281,6 +334,62 @@ export default function TeamsPage() {
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Project Config Modal */}
+                {configTeam && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    }} onClick={() => setConfigTeam(null)}>
+                        <div className="glass-card" style={{
+                            width: '90%', maxWidth: '500px', padding: '2.5rem'
+                        }} onClick={e => e.stopPropagation()}>
+                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Project Configuration</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                                Assign a project to <strong>{configTeam.name}</strong>
+                            </p>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>CURRENT PROJECT</p>
+                                <p style={{ fontSize: '1rem', color: 'var(--accent-secondary)' }}>
+                                    {configTeam.project?.name || 'No project assigned'}
+                                </p>
+                            </div>
+
+                            <div style={{ marginBottom: '2rem' }}>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>AVAILABLE PROJECTS</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {projects.map((project: any) => (
+                                        <button
+                                            key={project.id}
+                                            onClick={() => handleAssignProject(project.id)}
+                                            className="glass-card"
+                                            style={{
+                                                padding: '1rem',
+                                                textAlign: 'left',
+                                                cursor: 'pointer',
+                                                border: configTeam.project?.id === project.id ? '1px solid var(--accent-primary)' : '1px solid transparent'
+                                            }}
+                                        >
+                                            <p style={{ fontWeight: 600 }}>{project.name}</p>
+                                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                {project.client_name || 'No client'}
+                                            </p>
+                                        </button>
+                                    ))}
+                                    {projects.length === 0 && (
+                                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>No projects available. Create a project first.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <button onClick={() => setConfigTeam(null)} className="btn btn-ghost" style={{ width: '100%', padding: '14px' }}>
+                                Close
+                            </button>
                         </div>
                     </div>
                 )}

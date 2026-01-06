@@ -6,6 +6,7 @@ export default function RoadmapEditor() {
     const [weeks, setWeeks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingWeek, setEditingWeek] = useState<any>(null);
+    const [isCreating, setIsCreating] = useState(false);
 
     useEffect(() => {
         async function fetchWeeks() {
@@ -32,6 +33,42 @@ export default function RoadmapEditor() {
             alert("Roadmap updated successfully!");
         } catch (err) {
             alert("Failed to save changes.");
+        }
+    };
+
+    const handleCreateWeek = async () => {
+        setIsCreating(true);
+        try {
+            const nextWeekNum = weeks.length > 0 ? Math.max(...weeks.map(w => w.week_number)) + 1 : 1;
+            const newWeek = await apiRequest('/instructor/weeks', {
+                method: 'POST',
+                body: JSON.stringify({
+                    title: `Week ${nextWeekNum}`,
+                    overview: 'New week content - click to edit.',
+                    deliverable_spec: { hint: '' }
+                })
+            });
+            setWeeks([...weeks, newWeek].sort((a, b) => a.week_number - b.week_number));
+            setEditingWeek(newWeek);
+            alert("New week created!");
+        } catch (err) {
+            alert("Failed to create week.");
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    const handleDeleteWeek = async () => {
+        if (!editingWeek) return;
+        if (!confirm(`Are you sure you want to delete Week ${editingWeek.week_number}? This cannot be undone.`)) return;
+
+        try {
+            await apiRequest(`/instructor/weeks/${editingWeek.id}`, { method: 'DELETE' });
+            setWeeks(weeks.filter(w => w.id !== editingWeek.id));
+            setEditingWeek(null);
+            alert("Week deleted.");
+        } catch (err) {
+            alert("Failed to delete week.");
         }
     };
 
@@ -65,11 +102,21 @@ export default function RoadmapEditor() {
             </aside>
 
             <main className="main-view animate-fade-in">
-                <header style={{ marginBottom: '3rem' }}>
-                    <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '0.5rem' }}>Course <span className="text-gradient">Architect</span></h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
-                        Designing the 14-week analytical journey for BADM 550.
-                    </p>
+                <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div>
+                        <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '0.5rem' }}>Course <span className="text-gradient">Architect</span></h1>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
+                            Designing the {weeks.length}-week analytical journey for BADM 550.
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleCreateWeek}
+                        disabled={isCreating}
+                        className="btn btn-primary"
+                        style={{ padding: '14px 28px', fontSize: '0.9rem' }}
+                    >
+                        {isCreating ? 'Creating...' : '+ Add Week'}
+                    </button>
                 </header>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '3rem' }}>
@@ -162,6 +209,13 @@ export default function RoadmapEditor() {
                                         Cancel
                                     </button>
                                 </div>
+                                <button
+                                    className="btn btn-ghost"
+                                    style={{ width: '100%', padding: '12px', marginTop: '1rem', color: 'var(--danger)', border: '1px solid var(--danger)' }}
+                                    onClick={handleDeleteWeek}
+                                >
+                                    Delete Week
+                                </button>
                             </div>
                         ) : (
                             <div style={{ textAlign: 'center', padding: '4rem 0' }}>

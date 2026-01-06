@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta
 from app.database import SessionLocal
 from app.models.core import User, Team, Semester, Project, ProjectType, StudentProfile, TeamMembership, UserRole, TeamRole
 from app.models.features import Alert, EmailDraft, AlertPriority, Week, SubmissionStatus
+from app.models.projects import ProjectModule  # Import to register relationships
 from app.utils.auth import get_password_hash
 
 def seed_data():
@@ -45,6 +46,19 @@ def seed_data():
                 role=UserRole.TEACHER
             )
             db.add(teacher)
+
+        # Create TA
+        ta_user = db.query(User).filter(User.email == "ta@illinois.edu").first()
+        if not ta_user:
+            ta_user = User(
+                email="ta@illinois.edu",
+                hashed_password=get_password_hash("password123"),
+                first_name="Alex",
+                last_name="Assistant",
+                role=UserRole.TA
+            )
+            db.add(ta_user)
+            db.commit()
 
         student_user = db.query(User).filter(User.email == "student@illinois.edu").first()
         if not student_user:
