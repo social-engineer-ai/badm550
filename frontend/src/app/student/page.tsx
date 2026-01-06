@@ -106,19 +106,19 @@ export default function StudentDashboard() {
 
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                     <a href="/student" className="btn btn-ghost" style={{ justifyContent: 'flex-start', color: 'var(--accent-secondary)' }}>
-                        🏠 Home
+                        Home
                     </a>
-                    <a href="#" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                        🎯 Roadmap
+                    <a href="/student/projects" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
+                        Projects
                     </a>
                     <a href="/student/team" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                        📂 My Team
+                        My Team
                     </a>
                     <a href="#" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                        📊 Grades
+                        Grades
                     </a>
                     <a href="#" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                        ❓ Help
+                        Help
                     </a>
                 </nav>
 

@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager
 try:
     # When running as a module (e.g., docker, uvicorn backend.main:app)
     from .app.scheduler import start_scheduler
-    from .app.routers import auth, instructor, students, admin
+    from .app.routers import auth, instructor, students, admin, projects
 except ImportError:
     # When running directly or in tests
     from app.scheduler import start_scheduler
-    from app.routers import auth, instructor, students, admin
+    from app.routers import auth, instructor, students, admin, projects
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,6 +34,7 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(instructor.router, prefix="/api/v1")
 app.include_router(students.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(projects.router, prefix="/api/v1/projects", tags=["projects"])
 
 @app.get("/")
 async def root():

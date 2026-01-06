@@ -87,21 +87,24 @@ export default function InstructorDashboard() {
 
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                     <a href="/instructor" className="btn btn-ghost" style={{ justifyContent: 'flex-start', color: 'var(--accent-secondary)' }}>
-                        📊 Dashboard
+                        Dashboard
+                    </a>
+                    <a href="/instructor/projects" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
+                        Projects
                     </a>
                     <a href="/instructor/teams" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                        👥 Team Roster
+                        Team Roster
                     </a>
                     <a href="/instructor/gradebook" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                        📝 Gradebook
+                        Gradebook
                     </a>
                     {user?.role !== 'ta' && (
                         <>
                             <a href="/instructor/roadmap" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                                🎯 Roadmap
+                                Roadmap
                             </a>
                             <a href="/instructor/admin" className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>
-                                ⚙️ Admin
+                                Admin
                             </a>
                         </>
                     )}

@@ -92,8 +92,9 @@ class Semester(Base):
     end_date = Column(Date)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     projects = relationship("Project", back_populates="semester")
+    project_modules = relationship("ProjectModule", back_populates="semester")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -123,4 +124,5 @@ class Team(Base):
     
     project = relationship("Project", back_populates="teams")
     memberships = relationship("TeamMembership", back_populates="team")
+    project_assignments = relationship("TeamProjectAssignment", back_populates="team")
 
