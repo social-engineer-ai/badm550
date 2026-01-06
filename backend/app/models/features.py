@@ -137,3 +137,18 @@ class Grade(Base):
     student = relationship("StudentProfile")
     week = relationship("Week")
     grader = relationship("User")
+
+class TestFeedback(Base):
+    """Stores manual testing feedback from testers"""
+    __tablename__ = "test_feedback"
+    id = Column(Integer, primary_key=True, index=True)
+    tester_name = Column(String, nullable=False)
+    tester_email = Column(String, nullable=True)
+    section = Column(String, nullable=False)  # A, B, C, D, E, F
+    tests_passed = Column(Integer, nullable=False)
+    tests_total = Column(Integer, nullable=False)
+    issues = Column(JSON)  # List of {test_case, description, severity}
+    notes = Column(Text)
+    browser = Column(String)
+    os_info = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
