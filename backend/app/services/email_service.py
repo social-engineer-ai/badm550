@@ -19,11 +19,16 @@ class EmailService:
         self.token_path = 'token.pickle'
         self.creds_path = 'credentials.json'
 
-    async def authenticate(self, db: Session = None, user_id: int = None):
-        """Standard Google OAuth2 flow with DB-backed token persistent storage."""
-        from google.auth.credentials import Credentials
+    async def authenticate(self, db: Session = None, user_id: int = None, interactive: bool = False):
+        """Standard Google OAuth2 flow with DB-backed token persistent storage.
+
+        Args:
+            db: Database session
+            user_id: User ID for token storage
+            interactive: If True, allow blocking OAuth flow (for CLI use only)
+        """
         from google.oauth2.credentials import Credentials as OAuth2Credentials
-        
+
         # 1. Try to load from DB or pickle
         token_data = None
         if db and user_id:
@@ -31,7 +36,7 @@ class EmailService:
             user = db.query(User).filter(User.id == user_id).first()
             if user and user.oauth_token:
                 token_data = user.oauth_token
-        
+
         if not token_data and os.path.exists(self.token_path):
             with open(self.token_path, 'rb') as token:
                 self.creds = pickle.load(token)
@@ -41,28 +46,38 @@ class EmailService:
         # 2. Refresh or Re-auth
         if not self.creds or not self.creds.valid:
             if self.creds and self.creds.expired and self.creds.refresh_token:
-                self.creds.refresh(Request())
+                try:
+                    self.creds.refresh(Request())
+                except Exception as e:
+                    print(f"Failed to refresh token: {e}")
+                    self.creds = None
+                    return False
             else:
-                # Flow-based Auth
-                if not os.path.exists(self.creds_path) and settings.GOOGLE_CLIENT_ID:
-                    client_config = {
-                        "installed": {
-                            "client_id": settings.GOOGLE_CLIENT_ID,
-                            "project_id": settings.GOOGLE_PROJECT_ID,
-                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                            "token_uri": "https://oauth2.googleapis.com/token",
-                            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                            "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                            "redirect_uris": ["http://localhost"]
+                # Only run interactive OAuth if explicitly requested (CLI mode)
+                if interactive:
+                    if not os.path.exists(self.creds_path) and settings.GOOGLE_CLIENT_ID:
+                        client_config = {
+                            "installed": {
+                                "client_id": settings.GOOGLE_CLIENT_ID,
+                                "project_id": settings.GOOGLE_PROJECT_ID,
+                                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                                "token_uri": "https://oauth2.googleapis.com/token",
+                                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                                "redirect_uris": ["http://localhost"]
+                            }
                         }
-                    }
-                    flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-                    self.creds = flow.run_local_server(port=0)
-                elif os.path.exists(self.creds_path):
-                    flow = InstalledAppFlow.from_client_secrets_file(self.creds_path, SCOPES)
-                    self.creds = flow.run_local_server(port=0)
+                        flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+                        self.creds = flow.run_local_server(port=0)
+                    elif os.path.exists(self.creds_path):
+                        flow = InstalledAppFlow.from_client_secrets_file(self.creds_path, SCOPES)
+                        self.creds = flow.run_local_server(port=0)
+                    else:
+                        print("Gmail credentials not configured.")
+                        return False
                 else:
-                    print("Gmail credentials not configured.")
+                    # Non-interactive mode: no valid token, return False to use mock data
+                    print("Gmail not authenticated. Using mock data. Run OAuth setup to enable Gmail.")
                     return False
             
             # 3. Save new/refreshed token

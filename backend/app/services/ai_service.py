@@ -8,7 +8,7 @@ class AIService:
         # We check for the API key, but allow initialization for mock modes if needed
         self.api_key = settings.ANTHROPIC_API_KEY
         self.client = anthropic.Anthropic(api_key=self.api_key) if self.api_key else None
-        self.model = "claude-3-5-sonnet-20240620"
+        self.model = "claude-sonnet-4-20250514"
 
     async def _call_claude(self, system_prompt: str, user_message: str, max_tokens: int = 1500, json_mode: bool = False):
         if not self.client:
@@ -65,7 +65,29 @@ class AIService:
         )
         emails_text = "\n---\n".join([f"ID: {e['id']}\nFrom: {e['from']}\nSubject: {e['subject']}\nBody: {e['body']}" for e in emails])
         user_message = f"Incoming Emails:\n{emails_text}\n\nProvide the JSON analysis:"
-        return await self._call_claude(system_prompt, user_message, json_mode=True)
+        result = await self._call_claude(system_prompt, user_message, json_mode=True)
+
+        # If API failed, return mock analysis
+        if isinstance(result, str) and ("Error:" in result or "not set" in result.lower()):
+            return {
+                "urgent_alerts": [
+                    {"id": emails[0]["id"] if emails else "mock_1", "reason": "Data column question - needs guidance", "subject": emails[0].get("subject", "Question")}
+                ] if emails else [],
+                "clusters": [
+                    {
+                        "topic": "Technical Questions",
+                        "count": len(emails),
+                        "ids": [e["id"] for e in emails],
+                        "draft_response": "Thank you for your question. Please refer to the Week resources for guidance on this topic.",
+                        "summary": f"Received {len(emails)} student inquiries"
+                    }
+                ],
+                "daily_statistics": {"sentiment_score": 7, "pending_count": len(emails)},
+                "daily_digest": f"Processed {len(emails)} mock emails. AI analysis unavailable - please check ANTHROPIC_API_KEY configuration.",
+                "_mock": True,
+                "_api_error": result
+            }
+        return result
 
     async def evaluate_submission(self, submission_text: str, week_rules: Dict[str, Any]):
         """AUTO-EVAL: Validates a student submission against the week's specific rules."""
